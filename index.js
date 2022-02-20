@@ -5,6 +5,7 @@ const firebase = require('./firebase')
 const { v4: uuidv4 } = require('uuid');
 const ftp = require("basic-ftp")
 const streamifier = require('streamifier');
+const ip = require("ip");
 
 var multer = require('multer');
 var storage = multer.diskStorage({
@@ -99,17 +100,46 @@ function fileUpload(req, res) {
       })
 
       blobWriter.on('finish', () => {
+      let projectId = process.env.FIREBASE_PROJECT_ID ? process.env.FIREBASE_PROJECT_ID : 'pppp-59919';
+    	const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${projectId}.appspot.com/o/${encodeURIComponent(blob.name)}?alt=media`;
+      //publicUrl = publicUrl.replace('/', '%2F');
+
+      console.log('Public URL: ' + publicUrl);
+
         res.set('Content-Type', 'application/json');
         res.status(200).send({
           'id': fileIdentifier,
           'date': currDate,
           'Content-Type': req.file.mimetype,
-          'url': '/download/' + currDate + '/' + fileIdentifier
+          'url': publicUrl,
+          'apiUrl': '/download/' + currDate + '/' + fileIdentifier
         });
       })
       blobWriter.end(req.file.buffer)
   }
 }
+
+function mySlowFunction(baseNumber) {
+	console.time('mySlowFunction');
+	let result = 0;	
+	for (var i = Math.pow(baseNumber, 7); i >= 0; i--) {		
+		result += Math.atan(i) * Math.tan(i);
+	};
+	console.timeEnd('mySlowFunction');
+}
+
+app.get('/api/scale', (req, res) => {
+  var startTime, endTime;
+  startTime = new Date();
+  let baseNumber = req.query.baseNumber;
+  console.log('Slow function on ' + ip.address()  + ' started with baseNumber: ' + baseNumber);
+  mySlowFunction(baseNumber);
+  endTime = new Date();
+  var timeDiff = endTime - startTime; //in ms
+  //timeDiff /= 1000;
+  console.log('Slow function ended. Took: ' + Math.round(timeDiff) + "ms");
+  res.send('Slow function ended on ' + ip.address()  + ' !');
+})
 
 app.get('/api/file/test', upload.single('file'), (req, res) => {
   res.status(200).send('Env variable: ' + process.env.AUTH_SERVICE_ENDPOINT);
